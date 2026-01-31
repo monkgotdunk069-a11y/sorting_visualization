@@ -11,7 +11,9 @@ class DSAVisualizer:
         self.root.config(bg="#121212")
 
         self.array = []
+        self.original_array = []
         self.is_sorting = False
+        self.start_time = 0
         self.setup_ui()
 
     def setup_ui(self):
@@ -33,6 +35,11 @@ class DSAVisualizer:
 
         tk.Button(self.ctrl_frame, text="SORT", command=self.start_sorting, bg="#2ecc71", fg="white", width=10).grid(row=0, column=5, padx=10)
 
+        self.time_label = tk.Label(self.ctrl_frame, text="Time: 0.00 seconds", fg="white", bg="#1e1e1e")
+        self.time_label.grid(row=0, column=6, padx=10)
+
+        tk.Button(self.ctrl_frame, text="Compare All", command=self.compare_all, bg="#e74c3c", fg="white").grid(row=0, column=7, padx=5)
+
         # --- Canvas ---
         self.canvas = tk.Canvas(self.root, width=900, height=500, bg="#121212", highlightthickness=0)
         self.canvas.pack(pady=20)
@@ -40,12 +47,14 @@ class DSAVisualizer:
     def load_data(self):
         try:
             self.array = [int(x.strip()) for x in self.user_input.get().split(",")]
+            self.original_array = self.array.copy()
             self.draw_array(self.array, ["#5dade2"] * len(self.array))
         except:
             messagebox.showerror("Error", "Use format: 10, -5, 0, 20")
 
     def generate_random(self):
         self.array = [random.randint(-50, 50) for _ in range(15)]
+        self.original_array = self.array.copy()
         self.draw_array(self.array, ["#5dade2"] * len(self.array))
 
     def draw_array(self, data, color_list):
@@ -86,8 +95,9 @@ class DSAVisualizer:
     def start_sorting(self):
         if self.is_sorting: return
         self.is_sorting = True
+        self.start_time = time.time()
         algo = self.algo_menu.get()
-        
+
         if algo == "Bubble Sort": gen = self.bubble_sort()
         elif algo == "Insertion Sort": gen = self.insertion_sort()
         elif algo == "Selection Sort": gen = self.selection_sort()
@@ -102,6 +112,8 @@ class DSAVisualizer:
             next(gen)
             self.root.after(100, lambda: self.animate(gen))
         except StopIteration:
+            elapsed_time = time.time() - self.start_time
+            self.time_label.config(text=f"Time: {elapsed_time:.2f} seconds")
             self.draw_array(self.array, ["#2ecc71"] * len(self.array))
             self.is_sorting = False
 
@@ -183,6 +195,44 @@ class DSAVisualizer:
             self.draw_array(self.array, ["#f1c40f" if x == i or x == largest else "#5dade2" for x in range(len(self.array))])
             yield
             yield from self.heapify(n, largest)
+
+    def compare_all(self):
+        if not self.original_array:
+            messagebox.showerror("Error", "Please load or generate an array first.")
+            return
+
+        algorithms = ["Bubble Sort", "Insertion Sort", "Selection Sort", "Merge Sort", "Quick Sort", "Heap Sort"]
+        times = {}
+
+        for algo in algorithms:
+            self.array = self.original_array.copy()
+            start_time = time.time()
+
+            if algo == "Bubble Sort":
+                for _ in self.bubble_sort(): pass
+            elif algo == "Insertion Sort":
+                for _ in self.insertion_sort(): pass
+            elif algo == "Selection Sort":
+                for _ in self.selection_sort(): pass
+            elif algo == "Merge Sort":
+                for _ in self.merge_sort(0, len(self.array)-1): pass
+            elif algo == "Quick Sort":
+                for _ in self.quick_sort(0, len(self.array)-1): pass
+            elif algo == "Heap Sort":
+                for _ in self.heap_sort(): pass
+
+            elapsed_time = time.time() - start_time
+            times[algo] = elapsed_time
+
+        # Display comparison in a messagebox
+        comparison_text = "Algorithm Comparison:\n\n"
+        for algo, t in times.items():
+            comparison_text += f"{algo}: {t:.4f} seconds\n"
+        messagebox.showinfo("Comparison Results", comparison_text)
+
+        # Reset to original array
+        self.array = self.original_array.copy()
+        self.draw_array(self.array, ["#5dade2"] * len(self.array))
 
 if __name__ == "__main__":
     root = tk.Tk()
