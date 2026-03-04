@@ -93,8 +93,152 @@ class DSAVisualizer:
         
         self.root.update()
 
-    # --- Sorting Logic (same as your code) ---
-    # [Bubble, Selection, Insertion, Merge, Quick, Heap sort methods unchanged]
+    # --- Sorting Logic ---
+    def start_sorting(self):
+        if self.is_sorting: return
+        if not self.array:
+            messagebox.showerror("Error", "Please load or generate an array first.")
+            return
+            
+        self.is_sorting = True
+        self.start_time = time.time()
+        algo = self.algo_menu.get()
+
+        if algo == "Bubble Sort": gen = self.bubble_sort()
+        elif algo == "Insertion Sort": gen = self.insertion_sort()
+        elif algo == "Selection Sort": gen = self.selection_sort()
+        elif algo == "Merge Sort": gen = self.merge_sort(0, len(self.array)-1)
+        elif algo == "Quick Sort": gen = self.quick_sort(0, len(self.array)-1)
+        elif algo == "Heap Sort": gen = self.heap_sort()
+
+        self.animate(gen)
+
+    def animate(self, gen):
+        try:
+            next(gen)
+            self.root.after(100, lambda: self.animate(gen))
+        except StopIteration:
+            elapsed_time = time.time() - self.start_time
+            self.time_label.config(text=f"Time: {elapsed_time:.2f} seconds")
+            self.draw_array(self.array, ["#2ecc71"] * len(self.array))
+            self.is_sorting = False
+
+    def bubble_sort(self):
+        n = len(self.array)
+        for i in range(n):
+            for j in range(0, n - i - 1):
+                if self.array[j] > self.array[j + 1]:
+                    self.array[j], self.array[j + 1] = self.array[j + 1], self.array[j]
+                    self.draw_array(self.array, ["#e74c3c" if x == j or x == j+1 else "#5dade2" for x in range(n)])
+                    yield
+
+    def selection_sort(self):
+        for i in range(len(self.array)):
+            min_idx = i
+            for j in range(i+1, len(self.array)):
+                if self.array[j] < self.array[min_idx]: min_idx = j
+                self.draw_array(self.array, ["#e74c3c" if x == j or x == min_idx else "#5dade2" for x in range(len(self.array))])
+                yield
+            self.array[i], self.array[min_idx] = self.array[min_idx], self.array[i]
+
+    def insertion_sort(self):
+        for i in range(1, len(self.array)):
+            key = self.array[i]
+            j = i - 1
+            while j >= 0 and key < self.array[j]:
+                self.array[j + 1] = self.array[j]
+                j -= 1
+                self.draw_array(self.array, ["#e74c3c" if x == j else "#5dade2" for x in range(len(self.array))])
+                yield
+            self.array[j + 1] = key
+
+    def merge_sort(self, l, r):
+        if l < r:
+            m = (l + r) // 2
+            yield from self.merge_sort(l, m)
+            yield from self.merge_sort(m + 1, r)
+            
+            left, right = self.array[l:m+1], self.array[m+1:r+1]
+            i = j = 0
+            for k in range(l, r + 1):
+                if i < len(left) and (j >= len(right) or left[i] <= right[j]):
+                    self.array[k] = left[i]; i += 1
+                else:
+                    self.array[k] = right[j]; j += 1
+                self.draw_array(self.array, ["#f1c40f" if l <= x <= r else "#5dade2" for x in range(len(self.array))])
+                yield
+
+    def quick_sort(self, low, high):
+        if low < high:
+            pivot = self.array[high]
+            i = low - 1
+            for j in range(low, high):
+                if self.array[j] < pivot:
+                    i += 1
+                    self.array[i], self.array[j] = self.array[j], self.array[i]
+                self.draw_array(self.array, ["#e67e22" if x == high else "#5dade2" for x in range(len(self.array))])
+                yield
+            self.array[i+1], self.array[high] = self.array[high], self.array[i+1]
+            p = i + 1
+            yield from self.quick_sort(low, p - 1)
+            yield from self.quick_sort(p + 1, high)
+
+    def heap_sort(self):
+        n = len(self.array)
+        for i in range(n // 2 - 1, -1, -1):
+            yield from self.heapify(n, i)
+        for i in range(n-1, 0, -1):
+            self.array[i], self.array[0] = self.array[0], self.array[i]
+            yield from self.heapify(i, 0)
+
+    def heapify(self, n, i):
+        largest = i
+        l, r = 2 * i + 1, 2 * i + 2
+        if l < n and self.array[l] > self.array[largest]: largest = l
+        if r < n and self.array[r] > self.array[largest]: largest = r
+        if largest != i:
+            self.array[i], self.array[largest] = self.array[largest], self.array[i]
+            self.draw_array(self.array, ["#f1c40f" if x == i or x == largest else "#5dade2" for x in range(len(self.array))])
+            yield
+            yield from self.heapify(n, largest)
+
+    def compare_all(self):
+        if not self.original_array:
+            messagebox.showerror("Error", "Please load or generate an array first.")
+            return
+
+        algorithms = ["Bubble Sort", "Insertion Sort", "Selection Sort", "Merge Sort", "Quick Sort", "Heap Sort"]
+        times = {}
+
+        for algo in algorithms:
+            self.array = self.original_array.copy()
+            start_time = time.time()
+
+            if algo == "Bubble Sort":
+                for _ in self.bubble_sort(): pass
+            elif algo == "Insertion Sort":
+                for _ in self.insertion_sort(): pass
+            elif algo == "Selection Sort":
+                for _ in self.selection_sort(): pass
+            elif algo == "Merge Sort":
+                for _ in self.merge_sort(0, len(self.array)-1): pass
+            elif algo == "Quick Sort":
+                for _ in self.quick_sort(0, len(self.array)-1): pass
+            elif algo == "Heap Sort":
+                for _ in self.heap_sort(): pass
+
+            elapsed_time = time.time() - start_time
+            times[algo] = elapsed_time
+
+        # Display comparison in a messagebox
+        comparison_text = "Algorithm Comparison:\n\n"
+        for algo, t in times.items():
+            comparison_text += f"{algo}: {t:.4f} seconds\n"
+        messagebox.showinfo("Comparison Results", comparison_text)
+
+        # Reset to original array
+        self.array = self.original_array.copy()
+        self.draw_array(self.array, ["#5dade2"] * len(self.array))
 
     def save_to_excel(self):
         if not self.array:
